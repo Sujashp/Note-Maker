@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Easy Notes Maker</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #56adb6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            flex-direction: column;
+        }
+        .header {
+            width: 100%;
+            max-width: 600px;
+            padding: 20px;
+            text-align: center;
+            background-color: #0f100f;
+            color: rgb(241, 242, 235);
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #afc8c4d4;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .title, .note-content {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #0b0909;
+            border-radius: 4px;
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+        .title {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .placeholder {
+            color: #0a0a0a;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .controls select, .controls input[type="color"], .controls button {
+            margin: 0 5px;
+        }
+        .color-label {
+            font-size: 12px;
+            color: #0f0e0e;
+            margin-top: 2px;
+        }
+        .images-container img {
+            max-width: 100%;
+            margin-top: 10px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>Easy Notes Maker</h1>
+    <p>Your personal note-taking tool with rich formatting options.</p>
+</div>
+
+<div class="container" id="noteContainer">
+    <div class="controls">
+        <input type="color" id="fontColor" title="Font Color">
+        <div class="color-label" id="fontColorLabel">Font Color</div>
+        <select id="fontSize" title="Font Size">
+            <option value="16px">16px</option>
+            <option value="18px">18px</option>
+            <option value="20px">20px</option>
+            <option value="24px">24px</option>
+        </select>
+        <select id="fontStyle" title="Font Style">
+            <option value="normal">Normal</option>
+            <option value="italic">Italic</option>
+            <option value="bold">Bold</option>
+        </select>
+        <select id="fontFamily" title="Font Family">
+            <option value="Arial">Arial</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Verdana">Verdana</option>
+        </select>
+        <button onclick="document.execCommand('insertUnorderedList')">Bullets</button>
+        <button onclick="document.execCommand('insertOrderedList')">Numbering</button>
+        <button onclick="document.execCommand('justifyLeft')">Left Align</button>
+        <button onclick="document.execCommand('justifyCenter')">Center Align</button>
+        <button onclick="document.execCommand('justifyRight')">Right Align</button>
+        <input type="color" id="bgColor" title="Background Color">
+        <div class="color-label" id="bgColorLabel">Background Color</div>
+        <button onclick="addImage()">Add Photo</button>
+        <input type="file" id="imageUpload" accept="image/*" style="display: none;" multiple>
+    </div>
+
+    <div contenteditable="true" id="noteTitle" class="title placeholder" data-placeholder="Enter note title here...">Enter note title here...</div>
+    <div contenteditable="true" id="noteContent" class="note-content placeholder" data-placeholder="Write your notes here...">Write your notes here...</div>
+
+    <button onclick="exportToPDF()">Export to PDF</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.2/html2pdf.bundle.min.js"></script>
+<script>
+    const noteContent = document.getElementById("noteContent");
+    const noteTitle = document.getElementById("noteTitle");
+
+    document.getElementById("fontColor").addEventListener("input", function() {
+        document.execCommand("foreColor", false, this.value);
+        document.getElementById("fontColorLabel").innerText = `Font Color: ${this.value}`;
+    });
+
+    document.getElementById("fontSize").addEventListener("change", function() {
+        document.execCommand("fontSize", false, "5");
+        const fontSize = this.value;
+        setTimeout(() => {
+            const fontElements = noteContent.querySelectorAll("font[size='5']");
+            fontElements.forEach(el => {
+                el.removeAttribute("size");
+                el.style.fontSize = fontSize;
+            });
+        }, 0);
+    });
+
+    document.getElementById("fontStyle").addEventListener("change", function() {
+        if (this.value === "bold") {
+            document.execCommand("bold");
+        } else if (this.value === "italic") {
+            document.execCommand("italic");
+        }
+    });
+
+    document.getElementById("fontFamily").addEventListener("change", function() {
+        document.execCommand("fontName", false, this.value);
+    });
+
+    document.getElementById("bgColor").addEventListener("input", function() {
+        document.execCommand("backColor", false, this.value);
+        document.getElementById("bgColorLabel").innerText = `Background Color: ${this.value}`;
+    });
+
+    function handlePlaceholder(element) {
+        element.addEventListener("focus", function() {
+            if (element.classList.contains("placeholder")) {
+                element.innerText = "";
+                element.classList.remove("placeholder");
+            }
+        });
+
+        element.addEventListener("blur", function() {
+            if (element.innerText.trim() === "") {
+                element.innerText = element.getAttribute("data-placeholder");
+                element.classList.add("placeholder");
+            }
+        });
+    }
+
+    handlePlaceholder(noteTitle);
+    handlePlaceholder(noteContent);
+
+    function addImage() {
+        const imageInput = document.getElementById("imageUpload");
+        imageInput.click();
+    }
+
+    document.getElementById("imageUpload").addEventListener("change", function(event) {
+        const files = event.target.files;
+        Array.from(files).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.createElement("img");
+                img.src = e.target.result;
+                img.style.maxWidth = "100%";
+                img.style.marginTop = "10px";
+                img.style.display = "block";
+                const range = window.getSelection().getRangeAt(0);
+                range.insertNode(img);
+            };
+            reader.readAsDataURL(file);
+        });
+    });
+
+    function exportToPDF() {
+        const contentDiv = document.createElement("div");
+        const title = noteTitle.cloneNode(true);
+        const content = noteContent.cloneNode(true);
+        contentDiv.appendChild(title);
+        contentDiv.appendChild(content);
+        
+        html2pdf().from(contentDiv).save("my_note.pdf");
+    }
+</script>
+
+</body>
+</html>
